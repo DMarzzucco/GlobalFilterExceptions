@@ -1,42 +1,57 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
-using Microsoft.Extensions.Logging;
 
-namespace SAAS_task.Filters
+namespace GlobalFilterTemplate.Filter
 {
-    public class GlobalExceptionFilter : IExceptionFilter
+    public class GlobalFilterExceptions : IExceptionFilter
     {
-        private readonly ILogger<GlobalExceptionFilter> _logger;
-        public GlobalExceptionFilter(ILogger<GlobalExceptionFilter> logger)
+        private readonly ILogger<GlobalFilterExceptions> _logger;
+
+        public GlobalFilterExceptions(ILogger<GlobalFilterExceptions> logger)
         {
-            _logger = logger;
+            this._logger = logger;
         }
-        public void OnException(ExceptionContext context)
+
+        public void OnException(ExceptionContext ctx)
         {
-            _logger.LogError(context.Exception, "An unhandled exception ocurred.");
-            var statusCode = context.Exception is KeyNotFoundException ? 404 : 500;
+            this._logger.LogError(ctx.Exception, "Unhandled Exception occurred");
+
+            var statusCode = ctx.Exception switch
+            {
+                // Add more status responses here.
+                BadRequestException => 400,
+                KeyNotFoundException => 404,
+                UnauthorizedAccessException => 401,
+                ConflictException => 409,
+                _ => 500
+            };
 
             var response = new ErrorResponse
             {
                 StatusCode = statusCode,
-                Message = statusCode == 500
-                    ? "Internal Error Server, Please try again later"
-                    : "Resource not found",
-
-                Details = statusCode == 500 ? null : context.Exception.Message
+                Message = statusCode switch
+                {
+                    400 => ctx.Exception.Message,
+                    401 => ctx.Exception.Message,
+                    404 => ctx.Exception.Message,
+                    409 => ctx.Exception.Message,
+                    _ => ctx.Exception.Message
+                },
+                Details = ctx.Exception.Message
             };
-            context.Result = new ObjectResult(response)
+            ctx.Result = new ObjectResult(response)
             {
                 StatusCode = statusCode
             };
-            context.ExceptionHandled = true;
+            ctx.ExceptionHandled = true;
         }
-    }
-    public class ErrorResponse
-    {
-        public int StatusCode { get; set; }
-        public string Message { get; set; }
-        public string? Details { get; set; }
-    }
 
+        public class ErrorResponse
+        {
+            public int StatusCode { get; set; }
+            public string Message { get; set; }
+            public string? Details { get; set; }
+        }
+
+    }
 }
