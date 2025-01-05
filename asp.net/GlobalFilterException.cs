@@ -37,7 +37,7 @@ namespace GlobalFilterTemplate.Filter
                     409 => ctx.Exception.Message,
                     _ => ctx.Exception.Message
                 },
-                Details = ctx.Exception.Message
+                Details = StatusCode == 500 ? ctx.Exception.Message : null
             };
             ctx.Result = new ObjectResult(response)
             {
