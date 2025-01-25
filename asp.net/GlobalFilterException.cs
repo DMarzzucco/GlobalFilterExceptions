@@ -15,7 +15,12 @@ namespace GlobalFilterTemplate.Filter
         public void OnException(ExceptionContext ctx)
         {
             this._logger.LogError(ctx.Exception, "Unhandled Exception occurred");
-
+            
+            var stackTrace = new StackTrace(context.Exception, true);
+            var frame = stackTrace.GetFrame(0);
+            var fileName = frame?.GetFileName();
+            var lineNumber = frame?.GetFileLineNumber();
+            
             var statusCode = ctx.Exception switch
             {
                 // Add more status responses here.
@@ -38,7 +43,9 @@ namespace GlobalFilterTemplate.Filter
                     _ => ctx.Exception.Message
                 },
                 Details = statusCode == 500 ?
-                ctx.Exception.InnerException?.Message : null
+                    ctx.Exception.InnerException?.Message : null
+                FileName = fileName,
+                LineNumber = lineNumber
             };
             ctx.Result = new ObjectResult(response)
             {
@@ -52,6 +59,8 @@ namespace GlobalFilterTemplate.Filter
             public int StatusCode { get; set; }
             public string Message { get; set; }
             public string? Details { get; set; }
+            public string? FileName { get; set; }
+            public int? LineNumber { get; set; }
         }
 
     }
