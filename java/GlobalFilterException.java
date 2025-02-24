@@ -21,13 +21,30 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public ResponseEntity<Object> handleGlobalException(Exception ex, WebRequest request) {
         logger.error("Error occurred: {}", ex.getMessage(), ex);
 
+        StackTraceElement[] stackTrace = ex.getStackTrace();
+        String fileName = (stackTrace.length > 0) ? stackTrace[0].getFileName() : "Unknown";
+        int lineNumber = (stackTrace.length > 0) ? stackTrace[0].getLineNumber() : -1;
+
+        HttpStatus status = switch (ex) {
+            case IllegalArgumentException ignored -> HttpStatus.BAD_REQUEST;   // 400
+            case NullPointerException ignored -> HttpStatus.INTERNAL_SERVER_ERROR; // 500
+            case SecurityException ignored -> HttpStatus.UNAUTHORIZED;        // 401
+            case IllegalStateException ignored -> HttpStatus.CONFLICT;        // 409
+            case RuntimeException ignored -> HttpStatus.INTERNAL_SERVER_ERROR; // 500
+            // you can add more http status code
+            default -> HttpStatus.INTERNAL_SERVER_ERROR;
+        };
+        
         Map<String, Object> body = new HashMap<>();
         body.put("timestamp", LocalDateTime.now());
-        body.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
-        body.put("error", "Internal Server Error");
+        body.put("status", status.value());
+        body.put("error",  status.getReasonPhrase());
         body.put("message", ex.getMessage());
+        body.put("cause", ex.getCause() != null ? ex.getCause().getMessage() : "N/A");
+        body.put("file", fileName);
+        body.put("line", lineNumber);
         body.put("path", request.getDescription(false));
 
-        return new ResponseEntity<>(body, HttpStatus.INTERNAL_SERVER_ERROR);
+        return new ResponseEntity<>(body, status);
     }
 }
