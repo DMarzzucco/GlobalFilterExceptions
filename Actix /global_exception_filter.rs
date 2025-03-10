@@ -4,6 +4,7 @@ use std::fmt;
 use std::error::Error;
 use log::error;
 
+// Struct
 #[derive(Debug, Serialize)]
 struct ErrorResponse {
     status_code: u16,
@@ -11,7 +12,7 @@ struct ErrorResponse {
     file: Option<String>,
     line: Option<u32>,
 }
-
+// Struct
 #[derive(Debug)]
 pub struct CustomError {
     pub status_code: u16,
@@ -57,7 +58,7 @@ macro_rules! custom_error {
 async fn error_handler() -> Result<HttpResponse, CustomError> {
     Err(custom_error!(500, "Something went wrong"))
 }
-
+// Implementation
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     env_logger::init();
