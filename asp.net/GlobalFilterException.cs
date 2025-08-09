@@ -1,67 +1,55 @@
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Filters;
-
-namespace GlobalFilterTemplate.Filter
+public class GlobalFilterExceptions(ILogger<GlobalFilterExceptions> logger) : IExceptionFilter
 {
-    public class GlobalFilterExceptions : IExceptionFilter
-    {
-        private readonly ILogger<GlobalFilterExceptions> _logger;
+        private readonly ILogger<GlobalFilterExceptions> _logger = logger;
 
-        public GlobalFilterExceptions(ILogger<GlobalFilterExceptions> logger)
-        {
-            this._logger = logger;
-        }
-
-        public void OnException(ExceptionContext ctx)
+        public void OnException(ExceptionContext context)
         {
             this._logger.LogError(ctx.Exception, "Unhandled Exception occurred");
             
-            var stackTrace = new StackTrace(context.Exception, true);
-            var frame = stackTrace.GetFrame(0);
-            var fileName = frame?.GetFileName();
-            var lineNumber = frame?.GetFileLineNumber();
-            
-            var statusCode = ctx.Exception switch
+            var statusCode = context.Exception switch
             {
                 // Add more status responses here.
-                BadRequestException => 400,
-                KeyNotFoundException => 404,
+                BadRequestExceptions => 400,
                 UnauthorizedAccessException => 401,
-                ConflictException => 409,
+                ForbiddenExceptions => 403,
+                KeyNotFoundException => 404,
+                ConflictExceptions => 409,
+                TooManyRequestsException => 429,
                 _ => 500
+            };
+            var message = context.Exception switch
+            {
+                // Add more status responses here.    
+                BadRequestExceptions ex => ex.Message,
+                UnauthorizedAccessException ex => ex.Message,
+                ForbiddenExceptions ex => ex.Message,
+                KeyNotFoundException ex => ex.Message,
+                ConflictExceptions ex => ex.Message,
+                TooManyRequestsException ex => ex.Message,
+                _ => context.Exception.Message
             };
 
             var response = new ErrorResponse
             {
                 StatusCode = statusCode,
-                Message = statusCode switch
-                {
-                    400 => ctx.Exception.Message,
-                    401 => ctx.Exception.Message,
-                    404 => ctx.Exception.Message,
-                    409 => ctx.Exception.Message,
-                    _ => ctx.Exception.Message
-                },
+                Message = message,
                 Details = statusCode == 500 ?
-                    ctx.Exception.InnerException?.Message : null
-                FileName = fileName,
-                LineNumber = lineNumber
+                    context.Exception.InnerException?.Message : null
             };
-            ctx.Result = new ObjectResult(response)
+
+            context.Result = new ObjectResult(response)
             {
                 StatusCode = statusCode
             };
-            ctx.ExceptionHandled = true;
+            context.ExceptionHandled = true;
         }
 
         public class ErrorResponse
         {
             public int StatusCode { get; set; }
-            public string Message { get; set; }
+            public required string Message { get; set; }
             public string? Details { get; set; }
-            public string? FileName { get; set; }
-            public int? LineNumber { get; set; }
         }
-
     }
 }
+
